@@ -7,6 +7,7 @@ import sys
 from datetime import datetime
 from config import API_HASH, API_ID, LOGGER, BOT_TOKEN, TG_BOT_WORKERS, FORCE_SUB_CHANNEL, FORCE_SUB_CHANNEL2, CHANNEL_ID, PORT
 import pyrogram.utils
+import asyncio
 
 pyrogram.utils.MIN_CHANNEL_ID = -1009999999999
 
@@ -80,6 +81,18 @@ class Bot(Client):
     async def stop(self, *args):
         await super().stop()
         self.LOGGER(__name__).info("Bot Stopped...")
+
+def run(self):
+        """Run the bot."""
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.start())
+        self.LOGGER(__name__).info("Bot is now running. Thanks to @rohit_1888")
+        try:
+            loop.run_forever()
+        except KeyboardInterrupt:
+            self.LOGGER(__name__).info("Shutting down...")
+        finally:
+            loop.run_until_complete(self.stop())
             
 
 
