@@ -44,7 +44,7 @@ except ValueError:
 
 
 
-CUSTOM_CAPTION = os.environ.get("CUSTOM_CAPTION", "{previouscaption} \n\n<b><blockquote>Forward this File to @MlFiletoLinkbot \nTo Get Fast Download & Online Streaming Links 🚀⚡️</blockquote></b>")
+CUSTOM_CAPTION = os.environ.get("CUSTOM_CAPTION",None)
 
 PROTECT_CONTENT = True if os.environ.get('PROTECT_CONTENT', "False") == "True" else False
 
