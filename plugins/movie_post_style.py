@@ -1,3 +1,4 @@
+print("✅ movie_post_style plugin loaded successfully!")
 import re
 import random
 import string
