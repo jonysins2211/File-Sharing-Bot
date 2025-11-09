@@ -6,3 +6,4 @@ dnspython
 aiohttp
 
 humanize
+motor
