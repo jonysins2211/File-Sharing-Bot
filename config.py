@@ -1,5 +1,6 @@
 print("✅ movie_post_style plugin loaded successfully!")
 
+from bot import Bot
 import re
 import aiohttp
 from pyrogram import filters
