@@ -242,9 +242,9 @@ async def delete_files(messages, client, k):
 
 
 # ---------- (Catch-All Text Filter Fix Added) ----------
-# ⚠️ This prevents /movie and other commands from being hijacked.
-@Bot.on_message(filters.text & filters.private & ~filters.command)
+# ⚠️ This prevents /movie, /attach, /preview and other commands from being hijacked
+@Bot.on_message(filters.text & filters.private & ~filters.command())
 async def normal_text_handler(client: Bot, message: Message):
-    # You can leave this empty or add a simple info message
-    # If you already have search logic elsewhere, skip this.
+    # You can leave this empty or handle plain text messages here if needed.
+    # For example: pass or a small info reply.
     pass
