@@ -1,5 +1,6 @@
 print("✅ movie_post_style plugin loaded successfully!")
 
+from bot import Bot
 import re
 import aiohttp
 from pyrogram import filters
@@ -65,14 +66,18 @@ async def movie_search_cmd(client: Bot, message: Message):
         year = (r.get("release_date") or "")[:4]
         buttons.append([InlineKeyboardButton(f"{title} ({year})", callback_data=f"tmdbsel:{r['id']}:{query}")])
 
+    print(f"✅ Movie search results for '{query}' loaded successfully.")
     await msg.edit("🎬 Select the movie:", reply_markup=InlineKeyboardMarkup(buttons))
 
 
 # --- When movie is selected ---
 @Bot.on_callback_query(filters.regex(r"^tmdbsel:(\d+):(.*)$"))
 async def tmdb_selected_cb(client: Bot, cq: CallbackQuery):
+    print(f"✅ Callback received: {cq.data}")
+
     tmdb_id, query = cq.data.split(":")[1:]
     tmdb_id = int(tmdb_id)
+
     info = await tmdb_get(tmdb_id)
     title = info.get("title") or info.get("name")
     year = (info.get("release_date") or "")[:4]
@@ -104,6 +109,8 @@ async def tmdb_selected_cb(client: Bot, cq: CallbackQuery):
             file_link = f"{BASE_URL}?file_id={encoded}"
             results.append((quality, file_link, file_name))
 
+    print(f"✅ Found {len(results)} matching files for '{query}'")
+
     if not results:
         return await temp.edit("❌ No matching files found in DB Channel.")
 
@@ -133,6 +140,8 @@ async def tmdb_selected_cb(client: Bot, cq: CallbackQuery):
     buttons.append([InlineKeyboardButton("📢 Post to Channel", callback_data=f"postmovie:{tmdb_id}:{query}")])
 
     kb = InlineKeyboardMarkup(buttons)
+
+    # --- Send Preview ---
     if poster:
         await cq.message.reply_photo(poster, caption=final_caption, reply_markup=kb)
     else:
@@ -144,6 +153,8 @@ async def tmdb_selected_cb(client: Bot, cq: CallbackQuery):
 # --- Handle "Post to Channel" button ---
 @Bot.on_callback_query(filters.regex(r"^postmovie:(\d+):(.*)$"))
 async def post_movie_channel_cb(client: Bot, cq: CallbackQuery):
+    print(f"✅ Post callback received: {cq.data}")
+
     tmdb_id, query = cq.data.split(":")[1:]
     tmdb_id = int(tmdb_id)
     await cq.answer("Posting movie to channel...")
@@ -152,8 +163,10 @@ async def post_movie_channel_cb(client: Bot, cq: CallbackQuery):
         msg_to_forward = cq.message
         if MOVIE_POST_CHANNEL:
             await msg_to_forward.copy(MOVIE_POST_CHANNEL)
+            print(f"✅ Movie '{query}' posted successfully to channel.")
             await cq.answer("✅ Movie successfully posted!", show_alert=True)
         else:
             await cq.answer("❌ MOVIE_POST_CHANNEL not set.", show_alert=True)
     except Exception as e:
+        print(f"❌ Error posting movie: {e}")
         await cq.answer(f"❌ Failed to post: {e}", show_alert=True)
