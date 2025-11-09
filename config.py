@@ -67,6 +67,16 @@ START_MSG = os.environ.get("START_MESSAGE", "Hello {mention}\n\nI Can Store Priv
 
 FORCE_MSG = os.environ.get("FORCE_SUB_MESSAGE", "𝐒𝐨𝐫𝐫𝐲 {mention} 𝐲𝐨𝐮 𝐡𝐚𝐯𝐞 𝐭𝐨 𝐣𝐨𝐢𝐧 𝐦𝐲 𝐜𝐡𝐚𝐧𝐧𝐞𝐥𝐬 𝐟𝐢𝐫𝐬𝐭 𝐭𝐨 𝐚𝐜𝐜𝐞𝐬𝐬 𝐟𝐢𝐥𝐞𝐬..\n\n 𝐒𝐨 𝐩𝐥𝐞𝐚𝐬𝐞 𝐣𝐨𝐢𝐧 𝐦𝐲 2 𝐜𝐡𝐚𝐧𝐧𝐞𝐥𝐬 𝐟𝐢𝐫𝐬𝐭 𝐚𝐧𝐝 𝐜𝐥𝐢𝐜𝐤 𝐨𝐧 “Try again” 𝐛𝐮𝐭𝐭𝐨𝐧....!\n\nమీరు ఈ క్రింద ఉన్న 2 ఛానల్స్ లో తప్పకుండా జాయిన్ అవ్వాలి.. Join అయిన తర్వాత ' Try Again ' Click చేస్తే File వస్తుంది 😊")
 
+# --- Movie Post Generator Settings ---
+
+# TMDb API key (for movie posters, title, genre, etc.)
+TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "1ba98a04426a253bc7cb4be687abe2ed")
+
+# Base URL where your FileStore links open (your web endpoint)
+BASE_URL = os.environ.get("BASE_URL", "https://movieloverz-files.vercel.app")
+
+# Footer line under every movie post
+POWERED_BY = os.environ.get("POWERED_BY", "💫 Powered by @Movie_Loverzz")
 
 
 
