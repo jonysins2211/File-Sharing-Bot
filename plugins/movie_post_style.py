@@ -69,17 +69,19 @@ async def movie_auto_post(client: Bot, message: Message):
 
     await msg.edit(f"🎬 Found **{title} ({year})** — fetching files from DB channel...")
 
-    # --- Search your FileStore Channel for matching files ---
-    results = []
-    async for msg in client.search_messages(chat_id=CHANNEL_ID, query=query, limit=50):
-        if msg.document or msg.video:
-            file_name = msg.document.file_name if msg.document else msg.video.file_name
+    # --- Fetch latest files from DB Channel instead of searching ---
+results = []
+limit = 400  # how many latest messages to check
+
+async for msg in client.get_chat_history(CHANNEL_ID, limit=limit):
+    if msg.document or msg.video:
+        file_name = msg.document.file_name if msg.document else msg.video.file_name
+        if query.lower() in file_name.lower():  # local match
             quality = detect_quality(file_name)
             msg_id = msg.id
             encoded = await encode(f"get-{msg_id * abs(CHANNEL_ID)}")
             file_link = f"{BASE_URL}?file_id={encoded}"
             results.append((quality, file_link, file_name))
-
     if not results:
         return await msg.edit("❌ No matching files found in DB Channel.")
 
