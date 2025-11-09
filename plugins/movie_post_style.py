@@ -10,7 +10,6 @@ from pyrogram.types import (
     InlineKeyboardMarkup,
     CallbackQuery
 )
-from bot import Bot
 from config import ADMINS, TMDB_API_KEY, CHANNEL_ID, BASE_URL, POWERED_BY, MOVIE_POST_CHANNEL
 from helper_func import encode
 
@@ -31,7 +30,7 @@ async def tmdb_get(tmdb_id):
 
 
 # --- Helpers ---
-def detect_quality(name):
+def detect_quality(name: str):
     name = name.lower()
     if "2160" in name or "4k" in name:
         return "2160p"
@@ -64,10 +63,22 @@ async def movie_search_cmd(client: Bot, message: Message):
     for r in results[:6]:
         title = r.get("title") or r.get("name")
         year = (r.get("release_date") or "")[:4]
-        buttons.append([InlineKeyboardButton(f"{title} ({year})", callback_data=f"tmdbsel:{r['id']}:{query}")])
+        buttons.append([
+            InlineKeyboardButton(
+                f"{title} ({year})",
+                callback_data=f"tmdbsel:{r['id']}:{query}"
+            )
+        ])
 
     print(f"✅ Movie search results for '{query}' loaded successfully.")
-    await msg.edit("🎬 Select the movie:", reply_markup=InlineKeyboardMarkup(buttons))
+
+    # ✅ Fixed edit issue
+    try:
+        await msg.edit("🎬 Select the movie:", reply_markup=InlineKeyboardMarkup(buttons))
+    except Exception:
+        await message.reply_text("🎬 Select the movie:", reply_markup=InlineKeyboardMarkup(buttons))
+
+    print(f"🎬 Movie selection buttons sent for '{query}'.")
 
 
 # --- When movie is selected ---
@@ -75,8 +86,14 @@ async def movie_search_cmd(client: Bot, message: Message):
 async def tmdb_selected_cb(client: Bot, cq: CallbackQuery):
     print(f"✅ Callback received: {cq.data}")
 
-    tmdb_id, query = cq.data.split(":")[1:]
-    tmdb_id = int(tmdb_id)
+    try:
+        tmdb_id, query = cq.data.split(":")[1:]
+        tmdb_id = int(tmdb_id)
+    except Exception as e:
+        print(f"❌ Callback parse error: {e}")
+        return await cq.answer("Invalid movie data.", show_alert=True)
+
+    await cq.answer("Fetching movie details...")
 
     info = await tmdb_get(tmdb_id)
     title = info.get("title") or info.get("name")
@@ -96,7 +113,6 @@ async def tmdb_selected_cb(client: Bot, cq: CallbackQuery):
     )
 
     temp = await cq.message.reply_text(caption)
-    await cq.answer("Loading files...")
 
     # --- Search your FileStore Channel for matching files ---
     results = []
@@ -112,7 +128,8 @@ async def tmdb_selected_cb(client: Bot, cq: CallbackQuery):
     print(f"✅ Found {len(results)} matching files for '{query}'")
 
     if not results:
-        return await temp.edit("❌ No matching files found in DB Channel.")
+        await temp.edit("❌ No matching files found in DB Channel.")
+        return
 
     # --- Group by Quality ---
     quality_order = ["2160p", "1080p", "720p", "480p", "360p", "HD"]
@@ -137,8 +154,9 @@ async def tmdb_selected_cb(client: Bot, cq: CallbackQuery):
     final_caption = "\n".join(caption_lines)
 
     # --- Add "Post to Channel" button ---
-    buttons.append([InlineKeyboardButton("📢 Post to Channel", callback_data=f"postmovie:{tmdb_id}:{query}")])
-
+    buttons.append([
+        InlineKeyboardButton("📢 Post to Channel", callback_data=f"postmovie:{tmdb_id}:{query}")
+    ])
     kb = InlineKeyboardMarkup(buttons)
 
     # --- Send Preview ---
@@ -155,8 +173,13 @@ async def tmdb_selected_cb(client: Bot, cq: CallbackQuery):
 async def post_movie_channel_cb(client: Bot, cq: CallbackQuery):
     print(f"✅ Post callback received: {cq.data}")
 
-    tmdb_id, query = cq.data.split(":")[1:]
-    tmdb_id = int(tmdb_id)
+    try:
+        tmdb_id, query = cq.data.split(":")[1:]
+        tmdb_id = int(tmdb_id)
+    except Exception as e:
+        print(f"❌ Post callback parse error: {e}")
+        return await cq.answer("Invalid post data.", show_alert=True)
+
     await cq.answer("Posting movie to channel...")
 
     try:
