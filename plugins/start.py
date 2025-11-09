@@ -243,7 +243,7 @@ async def delete_files(messages, client, k):
 
 # ---------- (Catch-All Text Filter Fix Added) ----------
 # ⚠️ This prevents /movie, /attach, /preview and other commands from being hijacked
-@Bot.on_message(filters.text & filters.private & ~filters.command())
+@Bot.on_message(filters.text & filters.private & ~filters.command(commands=["start", "users", "broadcast", "movie", "attach", "preview", "genlink", "batch"]))
 async def normal_text_handler(client: Bot, message: Message):
     # You can leave this empty or handle plain text messages here if needed.
     # For example: pass or a small info reply.
