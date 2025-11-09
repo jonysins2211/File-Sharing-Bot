@@ -7,7 +7,7 @@ from config import ADMINS, CHANNEL_ID, DISABLE_CHANNEL_BUTTON
 from helper_func import encode
 
 
-# --- Admin uploads or forwarded files ---
+# ---- Admin uploads or forwarded files ---
 @Bot.on_message(filters.private & filters.user(ADMINS) & ~filters.command(['start','users','broadcast','batch','genlink','stats']))
 async def channel_post(client: Client, message: Message):
     reply_text = await message.reply_text("Please Wait...!", quote=True)
