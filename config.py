@@ -9,10 +9,7 @@ API_ID = int(os.environ.get("API_ID", "10685201"))
 API_HASH = os.environ.get("API_HASH", "8e039b83a886a2c2b97309ccc6298c20")
 
 OWNER_ID = int(os.environ.get("OWNER_ID", "949657126"))
-DB_URL = os.environ.get(
-    "DB_URL",
-    "mongodb+srv://johnmawa:2.de5ckkYQVC#8f@cluster0.haayhop.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-)
+DB_URL = os.environ.get( "DB_URL","mongodb+srv://johnmawa:2.de5ckkYQVC#8f@cluster0.haayhop.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
 DB_NAME = os.environ.get("DB_NAME", "johnmawa")
 
 CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "-1002087146692"))
