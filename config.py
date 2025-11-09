@@ -1,172 +1,93 @@
-print("✅ movie_post_style plugin loaded successfully!")
+import os
+import logging
+from logging.handlers import RotatingFileHandler
 
-from bot import Bot
-import re
-import aiohttp
-from pyrogram import filters
-from pyrogram.types import (
-    Message,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    CallbackQuery
+
+# --- Bot Basic Config ---
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
+API_ID = int(os.environ.get("API_ID", "10685201"))
+API_HASH = os.environ.get("API_HASH", "8e039b83a886a2c2b97309ccc6298c20")
+
+OWNER_ID = int(os.environ.get("OWNER_ID", "949657126"))
+DB_URL = os.environ.get(
+    "DB_URL",
+    "mongodb+srv://johnmawa:2.de5ckkYQVC#8f@cluster0.haayhop.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 )
-from bot import Bot
-from config import ADMINS, TMDB_API_KEY, CHANNEL_ID, BASE_URL, POWERED_BY, MOVIE_POST_CHANNEL
-from helper_func import encode
+DB_NAME = os.environ.get("DB_NAME", "johnmawa")
+
+CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "-1002087146692"))
+FORCE_SUB_CHANNEL = int(os.environ.get("FORCE_SUB_CHANNEL", "-1001948532295"))
+FORCE_SUB_CHANNEL2 = int(os.environ.get("FORCE_SUB_CHANNEL2", "-1001622914589"))
+
+FILE_AUTO_DELETE = int(os.getenv("FILE_AUTO_DELETE", "300"))  # auto delete in seconds
+PORT = os.environ.get("PORT", "8080")
+TG_BOT_WORKERS = int(os.environ.get("TG_BOT_WORKERS", "20"))
 
 
-# --- TMDb API ---
-async def tmdb_search(query):
-    url = f"https://api.themoviedb.org/3/search/movie?api_key={TMDB_API_KEY}&query={query}"
-    async with aiohttp.ClientSession() as s:
-        async with s.get(url) as r:
-            return await r.json()
+# --- Admins ---
+try:
+    ADMINS = [6848088376]
+    for x in (os.environ.get("ADMINS", "6848088376").split()):
+        ADMINS.append(int(x))
+except ValueError:
+    raise Exception("Your Admins list does not contain valid integers.")
 
 
-async def tmdb_get(tmdb_id):
-    url = f"https://api.themoviedb.org/3/movie/{tmdb_id}?api_key={TMDB_API_KEY}"
-    async with aiohttp.ClientSession() as s:
-        async with s.get(url) as r:
-            return await r.json()
+# --- Customization ---
+CUSTOM_CAPTION = os.environ.get("CUSTOM_CAPTION", None)
+PROTECT_CONTENT = True if os.environ.get("PROTECT_CONTENT", "False") == "True" else False
+DISABLE_CHANNEL_BUTTON = True if os.environ.get("DISABLE_CHANNEL_BUTTON", "True") == "True" else False
+BOT_STATS_TEXT = "<b>BOT UPTIME :</b>\n{uptime}"
+
+USER_REPLY_TEXT = "❌ Don't Send Me Messages Directly — I'm Only a File Share Bot!"
+START_MSG = os.environ.get(
+    "START_MESSAGE",
+    "Hello {mention}\n\nI Can Store Private Files In Specified Channel And Other Users Can Access It From Special Link."
+)
+
+FORCE_MSG = os.environ.get(
+    "FORCE_SUB_MESSAGE",
+    "𝐒𝐨𝐫𝐫𝐲 {mention} 𝐲𝐨𝐮 𝐡𝐚𝐯𝐞 𝐭𝐨 𝐣𝐨𝐢𝐧 𝐦𝐲 𝐜𝐡𝐚𝐧𝐧𝐞𝐥𝐬 𝐟𝐢𝐫𝐬𝐭 𝐭𝐨 𝐚𝐜𝐜𝐞𝐬𝐬 𝐟𝐢𝐥𝐞𝐬..\n\n"
+    "𝐒𝐨 𝐩𝐥𝐞𝐚𝐬𝐞 𝐣𝐨𝐢𝐧 𝐦𝐲 2 𝐜𝐡𝐚𝐧𝐧𝐞𝐥𝐬 𝐟𝐢𝐫𝐬𝐭 𝐚𝐧𝐝 𝐜𝐥𝐢𝐜𝐤 𝐨𝐧 “Try again” 𝐛𝐮𝐭𝐭𝐨𝐧....!\n\n"
+    "మీరు ఈ క్రింద ఉన్న 2 ఛానల్స్ లో తప్పకుండా జాయిన్ అవ్వాలి.. Join అయిన తర్వాత 'Try Again' Click చేస్తే File వస్తుంది 😊"
+)
 
 
-# --- Helpers ---
-def detect_quality(name):
-    name = name.lower()
-    if "2160" in name or "4k" in name:
-        return "2160p"
-    elif "1080" in name:
-        return "1080p"
-    elif "720" in name:
-        return "720p"
-    elif "480" in name:
-        return "480p"
-    elif "360" in name:
-        return "360p"
-    return "HD"
+# --- Movie Post Generator Settings ---
+# TMDb API key (for movie posters, title, genre, etc.)
+TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "1ba98a04426a253bc7cb4be687abe2ed")
+
+# Base URL where your FileStore links open (your web endpoint)
+BASE_URL = os.environ.get("BASE_URL", "https://movieloverz-files.vercel.app")
+
+# Footer line under every movie post
+POWERED_BY = os.environ.get("POWERED_BY", "💫 Powered by @Movie_Loverzz")
+
+# Channel ID where final movie posts are published
+MOVIE_POST_CHANNEL = int(os.environ.get("MOVIE_POST_CHANNEL", "-1002203356678"))
 
 
-# --- /movie Command ---
-@Bot.on_message(filters.command("movie") & filters.user(ADMINS) & filters.private)
-async def movie_search_cmd(client: Bot, message: Message):
-    if len(message.command) < 2:
-        return await message.reply_text("Usage: /movie <movie name>")
+# --- Final Setup ---
+ADMINS.append(OWNER_ID)
+ADMINS.append(6848088376)
 
-    query = " ".join(message.command[1:])
-    msg = await message.reply_text(f"🔍 Searching TMDb for **{query}** ...")
+LOG_FILE_NAME = "filesharingbot.txt"
 
-    js = await tmdb_search(query)
-    results = js.get("results", [])
-    if not results:
-        return await msg.edit("❌ No results found.")
-
-    buttons = []
-    for r in results[:6]:
-        title = r.get("title") or r.get("name")
-        year = (r.get("release_date") or "")[:4]
-        buttons.append([InlineKeyboardButton(f"{title} ({year})", callback_data=f"tmdbsel:{r['id']}:{query}")])
-
-    print(f"✅ Movie search results for '{query}' loaded successfully.")
-    await msg.edit("🎬 Select the movie:", reply_markup=InlineKeyboardMarkup(buttons))
-
-
-# --- When movie is selected ---
-@Bot.on_callback_query(filters.regex(r"^tmdbsel:(\d+):(.*)$"))
-async def tmdb_selected_cb(client: Bot, cq: CallbackQuery):
-    print(f"✅ Callback received: {cq.data}")
-
-    tmdb_id, query = cq.data.split(":")[1:]
-    tmdb_id = int(tmdb_id)
-
-    info = await tmdb_get(tmdb_id)
-    title = info.get("title") or info.get("name")
-    year = (info.get("release_date") or "")[:4]
-    rating = info.get("vote_average", "N/A")
-    genres = ", ".join([g["name"] for g in info.get("genres", [])]) or "N/A"
-    lang = info.get("original_language", "Unknown").upper()
-    poster_path = info.get("poster_path")
-    poster = f"https://image.tmdb.org/t/p/w600{poster_path}" if poster_path else None
-
-    caption = (
-        f"🎬 {title} ({year})\n"
-        f"⭐ TMDb: {rating}\n"
-        f"🎥 {genres}\n"
-        f"🗣️ Language: {lang}\n\n"
-        f"Fetching files from DB Channel..."
-    )
-
-    temp = await cq.message.reply_text(caption)
-    await cq.answer("Loading files...")
-
-    # --- Search your FileStore Channel for matching files ---
-    results = []
-    async for msg in client.search_messages(chat_id=CHANNEL_ID, query=query, limit=50):
-        if msg.document or msg.video:
-            file_name = msg.document.file_name if msg.document else msg.video.file_name
-            quality = detect_quality(file_name)
-            msg_id = msg.id
-            encoded = await encode(f"get-{msg_id * abs(CHANNEL_ID)}")
-            file_link = f"{BASE_URL}?file_id={encoded}"
-            results.append((quality, file_link, file_name))
-
-    print(f"✅ Found {len(results)} matching files for '{query}'")
-
-    if not results:
-        return await temp.edit("❌ No matching files found in DB Channel.")
-
-    # --- Group by Quality ---
-    quality_order = ["2160p", "1080p", "720p", "480p", "360p", "HD"]
-    buttons, caption_lines = [], [
-        f"🎬 {title} ({year})",
-        f"⭐ {rating} | {genres}",
-        f"🗣️ Language: {lang}",
-        "",
-        "🚀 Download Links:"
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(asctime)s - %(levelname)s] - %(name)s - %(message)s",
+    datefmt='%d-%b-%y %H:%M:%S',
+    handlers=[
+        RotatingFileHandler(
+            LOG_FILE_NAME,
+            maxBytes=50000000,
+            backupCount=10
+        ),
+        logging.StreamHandler()
     ]
-
-    for q in quality_order:
-        group = [f for f in results if f[0] == q]
-        if not group:
-            continue
-        row = [InlineKeyboardButton(f"{q} 🚀", url=f[1]) for f in group]
-        buttons.append(row)
-        caption_lines.append(f"📦 {q} : {len(group)} file(s)")
-
-    caption_lines.append("")
-    caption_lines.append(POWERED_BY)
-    final_caption = "\n".join(caption_lines)
-
-    # --- Add "Post to Channel" button ---
-    buttons.append([InlineKeyboardButton("📢 Post to Channel", callback_data=f"postmovie:{tmdb_id}:{query}")])
-
-    kb = InlineKeyboardMarkup(buttons)
-
-    # --- Send Preview ---
-    if poster:
-        await cq.message.reply_photo(poster, caption=final_caption, reply_markup=kb)
-    else:
-        await cq.message.reply_text(final_caption, reply_markup=kb)
-
-    await temp.delete()
+)
+logging.getLogger("pyrogram").setLevel(logging.WARNING)
 
 
-# --- Handle "Post to Channel" button ---
-@Bot.on_callback_query(filters.regex(r"^postmovie:(\d+):(.*)$"))
-async def post_movie_channel_cb(client: Bot, cq: CallbackQuery):
-    print(f"✅ Post callback received: {cq.data}")
-
-    tmdb_id, query = cq.data.split(":")[1:]
-    tmdb_id = int(tmdb_id)
-    await cq.answer("Posting movie to channel...")
-
-    try:
-        msg_to_forward = cq.message
-        if MOVIE_POST_CHANNEL:
-            await msg_to_forward.copy(MOVIE_POST_CHANNEL)
-            print(f"✅ Movie '{query}' posted successfully to channel.")
-            await cq.answer("✅ Movie successfully posted!", show_alert=True)
-        else:
-            await cq.answer("❌ MOVIE_POST_CHANNEL not set.", show_alert=True)
-    except Exception as e:
-        print(f"❌ Error posting movie: {e}")
-        await cq.answer(f"❌ Failed to post: {e}", show_alert=True)
+def LOGGER(name: str) -> logging.Logger:
+    return logging.getLogger(name)
