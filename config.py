@@ -78,7 +78,7 @@ BASE_URL = os.environ.get("BASE_URL", "https://movieloverz-files.vercel.app")
 # Footer line under every movie post
 POWERED_BY = os.environ.get("POWERED_BY", "💫 Powered by @Movie_Loverzz")
 
-
+MOVIE_POST_CHANNEL = int(os.environ.get("MOVIE_POST_CHANNEL", "-1002203356678"))
 
 ADMINS.append(OWNER_ID)
 ADMINS.append(6848088376)
