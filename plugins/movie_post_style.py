@@ -60,7 +60,7 @@ async def tmdb_get(tmdb_id):
 
 # ---------------- Commands ---------------- #
 
-@Client.on_message(filters.command("movie") & filters.private)
+@Client.on_message(filters.command("movie") & filters.user(ADMINS) & filters.private)
 async def movie_search_cmd(client: Client, m: Message):
     if len(m.command) < 2:
         return await m.reply_text("Usage: /movie <movie name>")
