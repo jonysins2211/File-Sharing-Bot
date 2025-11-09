@@ -1,15 +1,9 @@
 print("✅ movie_post_style plugin loaded successfully!")
 
 from bot import Bot
-import re
 import aiohttp
 from pyrogram import filters
-from pyrogram.types import (
-    Message,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    CallbackQuery
-)
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from config import ADMINS, TMDB_API_KEY, CHANNEL_ID, BASE_URL, POWERED_BY, MOVIE_POST_CHANNEL
 from helper_func import encode
 
@@ -45,58 +39,27 @@ def detect_quality(name: str):
     return "HD"
 
 
-# --- /movie Command ---
+# --- /movie Auto-Posting Command ---
 @Bot.on_message(filters.command("movie") & filters.user(ADMINS) & filters.private)
-async def movie_search_cmd(client: Bot, message: Message):
+async def movie_auto_post(client: Bot, message: Message):
     if len(message.command) < 2:
         return await message.reply_text("Usage: /movie <movie name>")
 
     query = " ".join(message.command[1:])
     msg = await message.reply_text(f"🔍 Searching TMDb for **{query}** ...")
 
+    # --- TMDb Search ---
     js = await tmdb_search(query)
     results = js.get("results", [])
     if not results:
-        return await msg.edit("❌ No results found.")
+        return await msg.edit("❌ No results found on TMDb.")
 
-    buttons = []
-    for r in results[:6]:
-        title = r.get("title") or r.get("name")
-        year = (r.get("release_date") or "")[:4]
-        buttons.append([
-            InlineKeyboardButton(
-                f"{title} ({year})",
-                callback_data=f"tmdbsel:{r['id']}:{query}"
-            )
-        ])
-
-    print(f"✅ Movie search results for '{query}' loaded successfully.")
-
-    # ✅ Fixed edit issue
-    try:
-        await msg.edit("🎬 Select the movie:", reply_markup=InlineKeyboardMarkup(buttons))
-    except Exception:
-        await message.reply_text("🎬 Select the movie:", reply_markup=InlineKeyboardMarkup(buttons))
-
-    print(f"🎬 Movie selection buttons sent for '{query}'.")
-
-
-# --- When movie is selected ---
-@Bot.on_callback_query(filters.regex(r"^tmdbsel:(\d+):(.*)$"))
-async def tmdb_selected_cb(client: Bot, cq: CallbackQuery):
-    print(f"✅ Callback received: {cq.data}")
-
-    try:
-        tmdb_id, query = cq.data.split(":")[1:]
-        tmdb_id = int(tmdb_id)
-    except Exception as e:
-        print(f"❌ Callback parse error: {e}")
-        return await cq.answer("Invalid movie data.", show_alert=True)
-
-    await cq.answer("Fetching movie details...")
-
+    # Pick first result automatically
+    r = results[0]
+    tmdb_id = r.get("id")
     info = await tmdb_get(tmdb_id)
-    title = info.get("title") or info.get("name")
+
+    title = info.get("title") or info.get("name") or query.title()
     year = (info.get("release_date") or "")[:4]
     rating = info.get("vote_average", "N/A")
     genres = ", ".join([g["name"] for g in info.get("genres", [])]) or "N/A"
@@ -104,15 +67,7 @@ async def tmdb_selected_cb(client: Bot, cq: CallbackQuery):
     poster_path = info.get("poster_path")
     poster = f"https://image.tmdb.org/t/p/w600{poster_path}" if poster_path else None
 
-    caption = (
-        f"🎬 {title} ({year})\n"
-        f"⭐ TMDb: {rating}\n"
-        f"🎥 {genres}\n"
-        f"🗣️ Language: {lang}\n\n"
-        f"Fetching files from DB Channel..."
-    )
-
-    temp = await cq.message.reply_text(caption)
+    await msg.edit(f"🎬 Found **{title} ({year})** — fetching files from DB channel...")
 
     # --- Search your FileStore Channel for matching files ---
     results = []
@@ -125,17 +80,15 @@ async def tmdb_selected_cb(client: Bot, cq: CallbackQuery):
             file_link = f"{BASE_URL}?file_id={encoded}"
             results.append((quality, file_link, file_name))
 
-    print(f"✅ Found {len(results)} matching files for '{query}'")
-
     if not results:
-        await temp.edit("❌ No matching files found in DB Channel.")
-        return
+        return await msg.edit("❌ No matching files found in DB Channel.")
 
-    # --- Group by Quality ---
+    # --- Group Files by Quality ---
     quality_order = ["2160p", "1080p", "720p", "480p", "360p", "HD"]
     buttons, caption_lines = [], [
         f"🎬 {title} ({year})",
-        f"⭐ {rating} | {genres}",
+        f"⭐ TMDb: {rating}",
+        f"🎥 {genres}",
         f"🗣️ Language: {lang}",
         "",
         "🚀 Download Links:"
@@ -151,45 +104,27 @@ async def tmdb_selected_cb(client: Bot, cq: CallbackQuery):
 
     caption_lines.append("")
     caption_lines.append(POWERED_BY)
-    final_caption = "\n".join(caption_lines)
+    caption = "\n".join(caption_lines)
+    markup = InlineKeyboardMarkup(buttons)
 
-    # --- Add "Post to Channel" button ---
-    buttons.append([
-        InlineKeyboardButton("📢 Post to Channel", callback_data=f"postmovie:{tmdb_id}:{query}")
-    ])
-    kb = InlineKeyboardMarkup(buttons)
-
-    # --- Send Preview ---
-    if poster:
-        await cq.message.reply_photo(poster, caption=final_caption, reply_markup=kb)
-    else:
-        await cq.message.reply_text(final_caption, reply_markup=kb)
-
-    await temp.delete()
-
-
-# --- Handle "Post to Channel" button ---
-@Bot.on_callback_query(filters.regex(r"^postmovie:(\d+):(.*)$"))
-async def post_movie_channel_cb(client: Bot, cq: CallbackQuery):
-    print(f"✅ Post callback received: {cq.data}")
-
+    # --- Auto Post to Channel ---
     try:
-        tmdb_id, query = cq.data.split(":")[1:]
-        tmdb_id = int(tmdb_id)
-    except Exception as e:
-        print(f"❌ Post callback parse error: {e}")
-        return await cq.answer("Invalid post data.", show_alert=True)
-
-    await cq.answer("Posting movie to channel...")
-
-    try:
-        msg_to_forward = cq.message
         if MOVIE_POST_CHANNEL:
-            await msg_to_forward.copy(MOVIE_POST_CHANNEL)
-            print(f"✅ Movie '{query}' posted successfully to channel.")
-            await cq.answer("✅ Movie successfully posted!", show_alert=True)
+            if poster:
+                await client.send_photo(
+                    chat_id=MOVIE_POST_CHANNEL,
+                    photo=poster,
+                    caption=caption,
+                    reply_markup=markup
+                )
+            else:
+                await client.send_message(
+                    chat_id=MOVIE_POST_CHANNEL,
+                    text=caption,
+                    reply_markup=markup
+                )
+            await msg.edit(f"✅ Movie **{title} ({year})** posted to channel successfully!")
         else:
-            await cq.answer("❌ MOVIE_POST_CHANNEL not set.", show_alert=True)
+            await msg.edit("❌ MOVIE_POST_CHANNEL not set in config.")
     except Exception as e:
-        print(f"❌ Error posting movie: {e}")
-        await cq.answer(f"❌ Failed to post: {e}", show_alert=True)
+        await msg.edit(f"❌ Error posting: `{e}`")
